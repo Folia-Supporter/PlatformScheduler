@@ -35,22 +35,9 @@ import java.util.concurrent.TimeUnit;
 
 public class FoliaScheduler implements PlatformScheduler {
 
-    private final Class<?> tickThreadClass;
-
-    public FoliaScheduler() {
-        Class<?> tickThreadClass;
-        try {
-            tickThreadClass = Class.forName("ca.spottedleaf.moonrise.common.util.TickThread");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-            tickThreadClass = null;
-        }
-        this.tickThreadClass = tickThreadClass;
-    }
-
     @Override
     public boolean isPrimaryThread() {
-        return isGlobalTickThread() || Thread.currentThread().getClass().isInstance(tickThreadClass);
+        return Bukkit.isPrimaryThread();
     }
 
     @Override
