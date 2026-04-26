@@ -26,6 +26,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
+import org.bukkit.plugin.IllegalPluginAccessException;
 import org.bukkit.plugin.Plugin;
 
 import java.util.concurrent.Callable;
@@ -82,12 +83,17 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task) {
-        if (isGlobalTickThread()) {
+        if (isGlobalTickThread() || !plugin.isEnabled()) {
             task.run();
         } else {
-            Bukkit.getGlobalRegionScheduler().run(plugin, st -> task.run());
+            try {
+                Bukkit.getGlobalRegionScheduler().run(plugin, st -> task.run());
+            } catch (IllegalPluginAccessException e) {
+                task.run();
+            }
         }
     }
+
 
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task, Entity entity) {
@@ -96,21 +102,31 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task, Runnable retired, Entity entity) {
-        if (isOwnedByCurrentRegion(entity)) {
+        if (isOwnedByCurrentRegion(entity) || !plugin.isEnabled()) {
             task.run();
         } else {
-            entity.getScheduler().run(plugin, st -> task.run(), retired);
+            try {
+                entity.getScheduler().run(plugin, st -> task.run(), retired);
+            } catch (IllegalPluginAccessException e) {
+                task.run();
+            }
         }
     }
 
+
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task, Location location) {
-        if (isOwnedByCurrentRegion(location)) {
+        if (isOwnedByCurrentRegion(location) || !plugin.isEnabled()) {
             task.run();
         } else {
-            Bukkit.getRegionScheduler().execute(plugin, location, task);
+            try {
+                Bukkit.getRegionScheduler().execute(plugin, location, task);
+            } catch (IllegalPluginAccessException e) {
+                task.run();
+            }
         }
     }
+
 
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task, Chunk chunk) {
@@ -119,12 +135,17 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public void executeOrScheduleSync(Plugin plugin, Runnable task, World world, int chunkX, int chunkZ) {
-        if (isOwnedByCurrentRegion(world, chunkX, chunkZ)) {
+        if (isOwnedByCurrentRegion(world, chunkX, chunkZ) || !plugin.isEnabled()) {
             task.run();
         } else {
-            Bukkit.getRegionScheduler().execute(plugin, world, chunkX, chunkZ, task);
+            try {
+                Bukkit.getRegionScheduler().execute(plugin, world, chunkX, chunkZ, task);
+            } catch (IllegalPluginAccessException e) {
+                task.run();
+            }
         }
     }
+
 
     @Override
     public FoliaScheduledTask runTask(Plugin plugin, Runnable task, Entity entity) {
@@ -148,7 +169,7 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public FoliaScheduledTask runTaskLater(Plugin plugin, Runnable task, Runnable retired, long delay, Entity entity) {
-        return new FoliaScheduledTask(entity.getScheduler().runDelayed(plugin, st -> task.run(), retired, delay));
+        return delay <= 0 ? runTask(plugin, task, retired, entity) : new FoliaScheduledTask(entity.getScheduler().runDelayed(plugin, st -> task.run(), retired, delay));
     }
 
     @Override
@@ -163,7 +184,7 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public FoliaScheduledTask runTaskLater(Plugin plugin, Runnable task, long delay, Location location) {
-        return new FoliaScheduledTask(Bukkit.getRegionScheduler().runDelayed(plugin, location, st -> task.run(), delay));
+        return delay <= 0 ? runTask(plugin, task, location) : new FoliaScheduledTask(Bukkit.getRegionScheduler().runDelayed(plugin, location, st -> task.run(), delay));
     }
 
     @Override
@@ -193,7 +214,7 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public FoliaScheduledTask runTaskLater(Plugin plugin, Runnable task, long delay, World world, int chunkX, int chunkZ) {
-        return new FoliaScheduledTask(Bukkit.getRegionScheduler().runDelayed(plugin, world, chunkX, chunkZ, st -> task.run(), delay));
+        return delay <= 0 ? runTask(plugin, task, world, chunkX, chunkZ) : new FoliaScheduledTask(Bukkit.getRegionScheduler().runDelayed(plugin, world, chunkX, chunkZ, st -> task.run(), delay));
     }
 
     @Override
@@ -208,7 +229,7 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public FoliaScheduledTask runTaskLater(Plugin plugin, Runnable task, long delay) {
-        return new FoliaScheduledTask(Bukkit.getGlobalRegionScheduler().runDelayed(plugin, st -> task.run(), delay));
+        return delay <= 0 ? runTask(plugin, task) : new FoliaScheduledTask(Bukkit.getGlobalRegionScheduler().runDelayed(plugin, st -> task.run(), delay));
     }
 
     @Override
@@ -223,7 +244,7 @@ public class FoliaScheduler implements PlatformScheduler {
 
     @Override
     public FoliaScheduledTask runTaskLaterAsynchronously(Plugin plugin, Runnable task, long delay) {
-        return new FoliaScheduledTask(Bukkit.getAsyncScheduler().runDelayed(plugin, st -> task.run(), delay * 50, TimeUnit.MILLISECONDS));
+        return delay <= 0 ? runTaskAsynchronously(plugin, task) : new FoliaScheduledTask(Bukkit.getAsyncScheduler().runDelayed(plugin, st -> task.run(), delay * 50, TimeUnit.MILLISECONDS));
     }
 
     @Override
@@ -282,6 +303,12 @@ public class FoliaScheduler implements PlatformScheduler {
                 future.completeExceptionally(e);
             }
         };
+    }
+
+    @Override
+    public boolean teleport(Entity entity, Location location) {
+        entity.teleportAsync(location);
+        return true;
     }
 
 }

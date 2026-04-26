@@ -237,5 +237,9 @@ public class Scheduler {
     public static <T> Future<T> callSyncMethod(Plugin plugin, Callable<T> task) {
         return platformScheduler.callSyncMethod(plugin, task);
     }
+
+    public static boolean teleport(Entity entity, Location location) {
+        return platformScheduler.teleport(entity, location);
+    }
     
 }

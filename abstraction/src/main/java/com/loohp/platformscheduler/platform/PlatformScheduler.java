@@ -114,5 +114,7 @@ public interface PlatformScheduler {
     <T> Future<T> callSyncMethod(Plugin plugin, Callable<T> task, World world, int chunkX, int chunkZ);
 
     <T> Future<T> callSyncMethod(Plugin plugin, Callable<T> task);
+
+    boolean teleport(Entity entity, Location location);
     
 }

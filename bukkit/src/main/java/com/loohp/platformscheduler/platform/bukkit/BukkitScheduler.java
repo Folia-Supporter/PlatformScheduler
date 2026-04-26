@@ -247,4 +247,9 @@ public class BukkitScheduler implements PlatformScheduler {
         return Bukkit.getScheduler().callSyncMethod(plugin, task);
     }
 
+    @Override
+    public boolean teleport(Entity entity, Location location) {
+        return entity.teleport(location);
+    }
+
 }
